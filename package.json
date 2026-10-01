@@ -2,10 +2,10 @@
   "name": "table-now-backend",
   "version": "1.0.0",
   "description": "TableNow backend API",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
   },
   "keywords": [],
   "author": "",
