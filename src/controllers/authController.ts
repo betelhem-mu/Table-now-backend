@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 export const register = async (
@@ -69,6 +70,84 @@ export const register = async (
 
     res.status(500).json({
       message: "Server error during registration",
+    });
+  }
+};
+
+export const login = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({
+        message: "Email and password are required",
+      });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (!user) {
+      res.status(401).json({
+        message: "Invalid email or password",
+      });
+      return;
+    }
+
+    const passwordIsCorrect = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordIsCorrect) {
+      res.status(401).json({
+        message: "Invalid email or password",
+      });
+      return;
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+
+    if (!jwtSecret) {
+      res.status(500).json({
+        message: "JWT secret is not configured",
+      });
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id.toString(),
+        role: user.role,
+      },
+      jwtSecret,
+      {
+        expiresIn: "1d",
+      }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      message: "Server error during login",
     });
   }
 };
