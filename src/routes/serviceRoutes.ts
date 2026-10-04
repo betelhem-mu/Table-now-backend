@@ -29,6 +29,13 @@ router.put(
   updateService
 );
 
+router.patch(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("provider"),
+  updateService
+);
+
 router.delete(
   "/:id",
   authMiddleware,

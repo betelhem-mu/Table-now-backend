@@ -252,3 +252,41 @@ export const completeBooking = async (
     });
   }
 };
+
+export const getBookings = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ message: "Authentication required" });
+    return;
+  }
+
+  if (req.user.role === "provider") {
+    return getProviderBookings(req, res);
+  }
+
+  return getCustomerBookings(req, res);
+};
+
+export const updateBookingStatus = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ message: "Authentication required" });
+    return;
+  }
+
+  const { status } = req.body;
+  if (status === "cancelled") {
+    return cancelBooking(req, res);
+  }
+  if (status === "completed") {
+    return completeBooking(req, res);
+  }
+
+  res.status(400).json({
+    message: "Status must be 'completed' or 'cancelled'",
+  });
+};

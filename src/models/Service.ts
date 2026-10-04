@@ -5,6 +5,8 @@ export interface IService extends Document {
   description: string;
   price: number;
   duration: number;
+  category?: string;
+  image?: string;
   provider: mongoose.Types.ObjectId;
 }
 
@@ -32,6 +34,18 @@ const serviceSchema = new Schema<IService>(
       type: Number,
       required: true,
       min: 1,
+    },
+
+    category: {
+      type: String,
+      trim: true,
+      default: "General",
+    },
+
+    image: {
+      type: String,
+      trim: true,
+      default: "",
     },
 
     provider: {

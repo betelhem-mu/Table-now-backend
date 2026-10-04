@@ -66,7 +66,7 @@ export const createService = async (
       return;
     }
 
-    const { name, description, price, duration } = req.body;
+    const { name, description, price, duration, category, image } = req.body;
 
     if (!name || !description || price === undefined || !duration) {
       res.status(400).json({
@@ -97,6 +97,8 @@ export const createService = async (
       description: description.trim(),
       price: numericPrice,
       duration: numericDuration,
+      category: category ? category.trim() : "General",
+      image: image ? image.trim() : "",
       provider: req.user.id,
     });
 
@@ -126,7 +128,7 @@ export const updateService = async (
     }
 
     const { id } = req.params;
-    const { name, description, price, duration } = req.body;
+    const { name, description, price, duration, category, image } = req.body;
 
     const service = await Service.findById(id);
 
@@ -190,6 +192,14 @@ export const updateService = async (
       }
 
       service.duration = numericDuration;
+    }
+
+    if (category !== undefined) {
+      service.category = category.trim();
+    }
+
+    if (image !== undefined) {
+      service.image = image.trim();
     }
 
     await service.save();

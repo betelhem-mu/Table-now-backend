@@ -5,11 +5,16 @@ import {
   cancelBooking,
   getProviderBookings,
   completeBooking,
+  getBookings,
+  updateBookingStatus,
 } from "../controllers/bookingController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
 
 const router = Router();
+
+// Generic API endpoints matching suggested API surface
+router.get("/", authMiddleware, getBookings);
 
 router.post(
   "/",
@@ -18,6 +23,11 @@ router.post(
   createBooking
 );
 
+router.patch("/:id", authMiddleware, updateBookingStatus);
+
+router.delete("/:id", authMiddleware, cancelBooking);
+
+// Role specific / legacy aliases
 router.get(
   "/customer",
   authMiddleware,
@@ -32,6 +42,13 @@ router.put(
   cancelBooking
 );
 
+router.patch(
+  "/:id/cancel",
+  authMiddleware,
+  roleMiddleware("customer"),
+  cancelBooking
+);
+
 router.get(
   "/provider",
   authMiddleware,
@@ -40,6 +57,13 @@ router.get(
 );
 
 router.put(
+  "/:id/complete",
+  authMiddleware,
+  roleMiddleware("provider"),
+  completeBooking
+);
+
+router.patch(
   "/:id/complete",
   authMiddleware,
   roleMiddleware("provider"),
