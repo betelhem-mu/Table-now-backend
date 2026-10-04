@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getServices,
+  getServiceById,
   createService,
   updateService,
   deleteService,
@@ -11,6 +12,8 @@ import roleMiddleware from "../middleware/roleMiddleware.js";
 const router = Router();
 
 router.get("/", authMiddleware, getServices);
+
+router.get("/:id", authMiddleware, getServiceById);
 
 router.post(
   "/",

@@ -23,6 +23,37 @@ export const getServices = async (
   }
 };
 
+export const getServiceById = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const service = await Service.findById(id).populate(
+      "provider",
+      "name email"
+    );
+
+    if (!service) {
+      res.status(404).json({
+        message: "Service not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      service,
+    });
+  } catch (error) {
+    console.error("Get service by ID error:", error);
+
+    res.status(500).json({
+      message: "Server error while fetching service",
+    });
+  }
+};
+
 export const createService = async (
   req: AuthenticatedRequest,
   res: Response
@@ -47,20 +78,14 @@ export const createService = async (
     const numericPrice = Number(price);
     const numericDuration = Number(duration);
 
-    if (
-      Number.isNaN(numericPrice) ||
-      numericPrice < 0
-    ) {
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
       res.status(400).json({
         message: "Price must be a valid number greater than or equal to 0",
       });
       return;
     }
 
-    if (
-      Number.isNaN(numericDuration) ||
-      numericDuration < 1
-    ) {
+    if (Number.isNaN(numericDuration) || numericDuration < 1) {
       res.status(400).json({
         message: "Duration must be at least 1 minute",
       });
@@ -144,10 +169,7 @@ export const updateService = async (
     if (price !== undefined) {
       const numericPrice = Number(price);
 
-      if (
-        Number.isNaN(numericPrice) ||
-        numericPrice < 0
-      ) {
+      if (Number.isNaN(numericPrice) || numericPrice < 0) {
         res.status(400).json({
           message: "Price must be a valid number greater than or equal to 0",
         });
@@ -160,10 +182,7 @@ export const updateService = async (
     if (duration !== undefined) {
       const numericDuration = Number(duration);
 
-      if (
-        Number.isNaN(numericDuration) ||
-        numericDuration < 1
-      ) {
+      if (Number.isNaN(numericDuration) || numericDuration < 1) {
         res.status(400).json({
           message: "Duration must be at least 1 minute",
         });
