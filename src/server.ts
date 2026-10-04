@@ -25,12 +25,13 @@ app.use("/api/bookings", bookingRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-const startServer = async (): Promise<void> => {
-  await connectDatabase();
-
+const startServer = (): void => {
   app.listen(PORT, () => {
     console.log(`TableNow backend running on port ${PORT}`);
   });
+
+  // Connect database or activate memory fallback asynchronously
+  connectDatabase();
 };
 
 startServer();

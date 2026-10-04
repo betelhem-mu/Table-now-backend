@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { memoryStore, getIsInMemoryMode } from "../config/memoryStore.js";
 
 export const register = async (
   req: Request,
@@ -25,20 +26,8 @@ export const register = async (
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-
-    const existingUser = await User.findOne({
-      email: normalizedEmail,
-    });
-
-    if (existingUser) {
-      res.status(409).json({
-        message: "A user with this email already exists",
-      });
-      return;
-    }
-
     const allowedRoles = ["customer", "provider"];
-    const userRole = role || "customer";
+    const userRole = (role || "customer") as "customer" | "provider";
 
     if (!allowedRoles.includes(userRole)) {
       res.status(400).json({
@@ -49,25 +38,42 @@ export const register = async (
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-      name: name.trim(),
+    // Register in memoryStore
+    const memoryUser = memoryStore.createUser({
+      name,
       email: normalizedEmail,
       password: hashedPassword,
       role: userRole,
     });
 
+    // Also register in Mongo Atlas if connected
+    if (!getIsInMemoryMode()) {
+      try {
+        const existing = await User.findOne({ email: normalizedEmail });
+        if (!existing) {
+          await User.create({
+            name: name.trim(),
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: userRole,
+          });
+        }
+      } catch (err) {
+        console.warn("Atlas user registration sync skipped:", err);
+      }
+    }
+
     res.status(201).json({
       message: "User registered successfully",
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        id: memoryUser._id,
+        name: memoryUser.name,
+        email: memoryUser.email,
+        role: memoryUser.role,
       },
     });
   } catch (error) {
     console.error("Registration error:", error);
-
     res.status(500).json({
       message: "Server error during registration",
     });
@@ -89,12 +95,39 @@ export const login = async (
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const jwtSecret = process.env.JWT_SECRET || "bookeasy_super_secret_key_change_this_later";
 
-    const user = await User.findOne({
-      email: normalizedEmail,
-    });
+    let foundUser: { id: string; name: string; email: string; passwordHash: string; role: "customer" | "provider" } | null = null;
 
-    if (!user) {
+    // First check memoryStore (default seeded provider/customer & memory registered)
+    const memoryUser = memoryStore.findUserByEmail(normalizedEmail);
+    if (memoryUser) {
+      foundUser = {
+        id: memoryUser._id,
+        name: memoryUser.name,
+        email: memoryUser.email,
+        passwordHash: memoryUser.password,
+        role: memoryUser.role,
+      };
+    } else if (!getIsInMemoryMode()) {
+      // Check Mongo Atlas
+      try {
+        const dbUser = await User.findOne({ email: normalizedEmail });
+        if (dbUser) {
+          foundUser = {
+            id: dbUser._id.toString(),
+            name: dbUser.name,
+            email: dbUser.email,
+            passwordHash: dbUser.password,
+            role: dbUser.role,
+          };
+        }
+      } catch (dbError) {
+        console.warn("Mongo Atlas user lookup failed:", dbError);
+      }
+    }
+
+    if (!foundUser) {
       res.status(401).json({
         message: "Invalid email or password",
       });
@@ -103,7 +136,7 @@ export const login = async (
 
     const passwordIsCorrect = await bcrypt.compare(
       password,
-      user.password
+      foundUser.passwordHash
     );
 
     if (!passwordIsCorrect) {
@@ -113,19 +146,10 @@ export const login = async (
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
-
-    if (!jwtSecret) {
-      res.status(500).json({
-        message: "JWT secret is not configured",
-      });
-      return;
-    }
-
     const token = jwt.sign(
       {
-        userId: user._id.toString(),
-        role: user.role,
+        userId: foundUser.id,
+        role: foundUser.role,
       },
       jwtSecret,
       {
@@ -137,15 +161,14 @@ export const login = async (
       message: "Login successful",
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        id: foundUser.id,
+        name: foundUser.name,
+        email: foundUser.email,
+        role: foundUser.role,
       },
     });
   } catch (error) {
     console.error("Login error:", error);
-
     res.status(500).json({
       message: "Server error during login",
     });
