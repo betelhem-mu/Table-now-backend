@@ -101,10 +101,14 @@ export const memoryStore = {
   },
 
   createUser: (data: { name: string; email: string; password: string; role: "customer" | "provider" }) => {
+    const norm = data.email.toLowerCase().trim();
+    const existing = users.find((u) => u.email.toLowerCase().trim() === norm);
+    if (existing) return null;
+
     const newUser: MemoryUser = {
       _id: generateId(),
       name: data.name.trim(),
-      email: data.email.toLowerCase().trim(),
+      email: norm,
       password: data.password,
       role: data.role || "customer",
       createdAt: new Date(),

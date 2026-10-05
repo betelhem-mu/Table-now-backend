@@ -8,6 +8,10 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+const getJwtSecret = (): string => {
+  return process.env.JWT_SECRET || "bookeasy_super_secret_key_change_this_later";
+};
+
 const authMiddleware = (
   req: AuthenticatedRequest,
   res: Response,
@@ -39,16 +43,7 @@ const authMiddleware = (
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
-
-    if (!jwtSecret) {
-      res.status(500).json({
-        message: "JWT secret is not configured",
-      });
-      return;
-    }
-
-    const decoded = jwt.verify(token, jwtSecret) as {
+    const decoded = jwt.verify(token, getJwtSecret()) as {
       userId: string;
       role: "customer" | "provider";
     };
@@ -64,6 +59,32 @@ const authMiddleware = (
       message: "Invalid or expired token",
     });
   }
+};
+
+export const optionalAuthMiddleware = (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      if (token) {
+        const decoded = jwt.verify(token, getJwtSecret()) as {
+          userId: string;
+          role: "customer" | "provider";
+        };
+        req.user = {
+          id: decoded.userId,
+          role: decoded.role,
+        };
+      }
+    }
+  } catch {
+    // Optional auth - ignore token errors for public browsing
+  }
+  next();
 };
 
 export default authMiddleware;

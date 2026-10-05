@@ -36,15 +36,45 @@ export const register = async (
       return;
     }
 
+    // Prevent duplicate registration with same email
+    const existingMemoryUser = memoryStore.findUserByEmail(normalizedEmail);
+    if (existingMemoryUser) {
+      res.status(400).json({
+        message: "An account with this email address already exists.",
+      });
+      return;
+    }
+
+    if (!getIsInMemoryMode()) {
+      try {
+        const existingDbUser = await User.findOne({ email: normalizedEmail });
+        if (existingDbUser) {
+          res.status(400).json({
+            message: "An account with this email address already exists.",
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("MongoDB email check skipped:", err);
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Register in memoryStore
     const memoryUser = memoryStore.createUser({
-      name,
+      name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
       role: userRole,
     });
+
+    if (!memoryUser) {
+      res.status(400).json({
+        message: "An account with this email address already exists.",
+      });
+      return;
+    }
 
     // Also register in Mongo Atlas if connected
     if (!getIsInMemoryMode()) {
