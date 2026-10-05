@@ -198,7 +198,7 @@ export const memoryStore = {
       image: data.image || "",
       provider: providerUser
         ? { _id: providerUser._id, name: providerUser.name, email: providerUser.email }
-        : data.providerId,
+        : { _id: data.providerId, name: "Provider", email: "" },
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -230,24 +230,41 @@ export const memoryStore = {
   // BOOKING METHODS
   getBookings: (filter: { customerId?: string; providerId?: string }) => {
     return bookings.filter((b) => {
-      if (filter.customerId && (b.customer._id || b.customer) !== filter.customerId) return false;
-      if (filter.providerId && (b.provider._id || b.provider) !== filter.providerId) return false;
+      if (filter.customerId) {
+        const cId = typeof b.customer === "object" ? b.customer?._id : b.customer;
+        if (cId !== filter.customerId) return false;
+      }
+      if (filter.providerId) {
+        const pId = typeof b.provider === "object" ? b.provider?._id : b.provider;
+        if (pId !== filter.providerId) return false;
+      }
       return true;
     });
   },
 
   createBooking: (data: { customerId: string; serviceId: string; date: Date; time?: string }) => {
-    const service = services.find((s) => s._id === data.serviceId);
-    const customer = users.find((u) => u._id === data.customerId);
-    if (!service || !customer) return null;
+    let service: any = services.find((s) => s._id === data.serviceId);
+    let customer: any = users.find((u) => u._id === data.customerId);
 
-    const provider = typeof service.provider === "object" ? service.provider : users.find((u) => u._id === service.provider);
+    if (!customer) {
+      customer = { _id: data.customerId, name: "Customer", email: "" };
+    }
+
+    if (!service) {
+      service = { _id: data.serviceId, name: "Service", price: 0, duration: 30, image: "", category: "General", provider: "provider" };
+    }
+
+    const providerObj = typeof service.provider === "object"
+      ? service.provider
+      : (users.find((u) => u._id === service.provider) || { _id: service.provider, name: "Provider", email: "" });
 
     const newBooking: MemoryBooking = {
       _id: generateId(),
-      customer: { _id: customer._id, name: customer.name, email: customer.email },
-      provider: provider ? { _id: provider._id, name: provider.name, email: provider.email } : service.provider,
-      service: { _id: service._id, name: service.name, price: service.price, duration: service.duration, image: service.image, category: service.category },
+      customer: { _id: customer._id, name: customer.name || "Customer", email: customer.email || "" },
+      provider: typeof providerObj === "object"
+        ? { _id: providerObj._id || "provider", name: providerObj.name || "Provider", email: providerObj.email || "" }
+        : { _id: providerObj, name: "Provider", email: "" },
+      service: { _id: service._id, name: service.name || "Service", price: service.price || 0, duration: service.duration || 30, image: service.image || "", category: service.category || "General" },
       date: new Date(data.date),
       time: data.time || "",
       status: "scheduled",

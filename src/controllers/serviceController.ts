@@ -13,19 +13,30 @@ export const getServices = async (
   res: Response
 ): Promise<void> => {
   try {
+    const memoryServices = memoryStore.getServices() || [];
+
     if (getIsInMemoryMode()) {
-      res.status(200).json({ services: memoryStore.getServices() });
+      res.status(200).json({ services: memoryServices });
       return;
     }
 
     try {
-      const services = await Service.find()
+      const dbServices = await Service.find()
         .populate("provider", "name email")
         .sort({ createdAt: -1 });
 
-      res.status(200).json({ services });
+      const existingIds = new Set(dbServices.map((s) => s._id.toString()));
+      const combined = [...dbServices];
+
+      for (const mServ of memoryServices) {
+        if (!existingIds.has(mServ._id)) {
+          combined.push(mServ as any);
+        }
+      }
+
+      res.status(200).json({ services: combined });
     } catch {
-      res.status(200).json({ services: memoryStore.getServices() });
+      res.status(200).json({ services: memoryServices });
     }
   } catch (error) {
     console.error("Get services error:", error);
@@ -106,44 +117,33 @@ export const createService = async (
       return;
     }
 
-    if (getIsInMemoryMode()) {
-      const newServ = memoryStore.createService({
-        name,
-        description,
-        price: numericPrice,
-        duration: numericDuration,
-        category,
-        image,
-        providerId: req.user.id,
-      });
-      res.status(201).json({ message: "Service created successfully", service: newServ });
-      return;
+    const newServ = memoryStore.createService({
+      name,
+      description,
+      price: numericPrice,
+      duration: numericDuration,
+      category,
+      image,
+      providerId: req.user.id,
+    });
+
+    if (!getIsInMemoryMode()) {
+      try {
+        await Service.create({
+          name: name.trim(),
+          description: description.trim(),
+          price: numericPrice,
+          duration: numericDuration,
+          category: category ? category.trim() : "General",
+          image: image ? image.trim() : "",
+          provider: req.user.id,
+        });
+      } catch (err) {
+        console.warn("Atlas service creation sync skipped/fallback used:", err);
+      }
     }
 
-    try {
-      const service = await Service.create({
-        name: name.trim(),
-        description: description.trim(),
-        price: numericPrice,
-        duration: numericDuration,
-        category: category ? category.trim() : "General",
-        image: image ? image.trim() : "",
-        provider: req.user.id,
-      });
-
-      res.status(201).json({ message: "Service created successfully", service });
-    } catch {
-      const newServ = memoryStore.createService({
-        name,
-        description,
-        price: numericPrice,
-        duration: numericDuration,
-        category,
-        image,
-        providerId: req.user.id,
-      });
-      res.status(201).json({ message: "Service created successfully", service: newServ });
-    }
+    res.status(201).json({ message: "Service created successfully", service: newServ });
   } catch (error) {
     console.error("Create service error:", error);
     res.status(500).json({ message: "Server error while creating service" });

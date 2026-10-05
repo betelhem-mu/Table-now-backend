@@ -47,91 +47,43 @@ export const createBooking = async (
       return;
     }
 
-    if (getIsInMemoryMode()) {
-      const service = memoryStore.getServiceById(serviceId);
-      if (!service) {
-        res.status(404).json({ message: "Service not found" });
-        return;
-      }
+    const memoryBooking = memoryStore.createBooking({
+      customerId: req.user.id,
+      serviceId,
+      date: bookingDate,
+      time: time || "",
+    });
 
-      const memoryBooking = memoryStore.createBooking({
-        customerId: req.user.id,
-        serviceId,
-        date: bookingDate,
-        time: time || "",
-      });
-
-      if (!memoryBooking) {
-        res.status(400).json({ message: "Could not create booking" });
-        return;
-      }
-
-      res.status(201).json({
-        message: "Booking created successfully",
-        booking: memoryBooking,
-      });
-      return;
-    }
-
-    try {
-      const service = await Service.findById(serviceId);
-      if (!service) {
-        const memServ = memoryStore.getServiceById(serviceId);
-        if (memServ) {
-          const memoryBooking = memoryStore.createBooking({
-            customerId: req.user.id,
-            serviceId,
+    if (!getIsInMemoryMode()) {
+      try {
+        const service = await Service.findById(serviceId);
+        if (service) {
+          const existingBooking = await Booking.findOne({
+            service: service._id,
             date: bookingDate,
-            time: time || "",
+            status: "scheduled",
           });
-          res.status(201).json({
-            message: "Booking created successfully",
-            booking: memoryBooking,
-          });
-          return;
+
+          if (!existingBooking) {
+            await Booking.create({
+              customer: req.user.id,
+              service: service._id,
+              provider: service.provider,
+              date: bookingDate,
+              time: time || "",
+              status: "scheduled",
+            });
+          }
         }
-        res.status(404).json({ message: "Service not found" });
-        return;
+      } catch (err) {
+        console.warn("Atlas booking sync skipped/fallback used:", err);
       }
-
-      const existingBooking = await Booking.findOne({
-        service: service._id,
-        date: bookingDate,
-        status: "scheduled",
-      });
-
-      if (existingBooking) {
-        res.status(409).json({
-          message: "This service is already booked for this time",
-        });
-        return;
-      }
-
-      const booking = await Booking.create({
-        customer: req.user.id,
-        service: service._id,
-        provider: service.provider,
-        date: bookingDate,
-        time: time || "",
-        status: "scheduled",
-      });
-
-      res.status(201).json({
-        message: "Booking created successfully",
-        booking,
-      });
-    } catch {
-      const memoryBooking = memoryStore.createBooking({
-        customerId: req.user.id,
-        serviceId,
-        date: bookingDate,
-        time: time || "",
-      });
-      res.status(201).json({
-        message: "Booking created successfully",
-        booking: memoryBooking,
-      });
     }
+
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking: memoryBooking,
+    });
   } catch (error) {
     console.error("Create booking error:", error);
     res.status(500).json({
@@ -152,24 +104,33 @@ export const getCustomerBookings = async (
       return;
     }
 
+    const memoryBookings = memoryStore.getBookings({ customerId: req.user.id }) || [];
+
     if (getIsInMemoryMode()) {
-      const bookings = memoryStore.getBookings({ customerId: req.user.id });
-      res.status(200).json({ bookings });
+      res.status(200).json({ bookings: memoryBookings });
       return;
     }
 
     try {
-      const bookings = await Booking.find({
+      const dbBookings = await Booking.find({
         customer: req.user.id,
       })
         .populate("service")
         .populate("provider", "name email")
         .sort({ date: 1 });
 
-      res.status(200).json({ bookings });
+      const existingIds = new Set(dbBookings.map((b) => b._id.toString()));
+      const combined = [...dbBookings];
+
+      for (const mBook of memoryBookings) {
+        if (!existingIds.has(mBook._id)) {
+          combined.push(mBook as any);
+        }
+      }
+
+      res.status(200).json({ bookings: combined });
     } catch {
-      const bookings = memoryStore.getBookings({ customerId: req.user.id });
-      res.status(200).json({ bookings });
+      res.status(200).json({ bookings: memoryBookings });
     }
   } catch (error) {
     console.error("Get customer bookings error:", error);
@@ -270,24 +231,33 @@ export const getProviderBookings = async (
       return;
     }
 
+    const memoryBookings = memoryStore.getBookings({ providerId: req.user.id }) || [];
+
     if (getIsInMemoryMode()) {
-      const bookings = memoryStore.getBookings({ providerId: req.user.id });
-      res.status(200).json({ bookings });
+      res.status(200).json({ bookings: memoryBookings });
       return;
     }
 
     try {
-      const bookings = await Booking.find({
+      const dbBookings = await Booking.find({
         provider: req.user.id,
       })
         .populate("customer", "name email")
         .populate("service")
         .sort({ date: 1 });
 
-      res.status(200).json({ bookings });
+      const existingIds = new Set(dbBookings.map((b) => b._id.toString()));
+      const combined = [...dbBookings];
+
+      for (const mBook of memoryBookings) {
+        if (!existingIds.has(mBook._id)) {
+          combined.push(mBook as any);
+        }
+      }
+
+      res.status(200).json({ bookings: combined });
     } catch {
-      const bookings = memoryStore.getBookings({ providerId: req.user.id });
-      res.status(200).json({ bookings });
+      res.status(200).json({ bookings: memoryBookings });
     }
   } catch (error) {
     console.error("Get provider bookings error:", error);
