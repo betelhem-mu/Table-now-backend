@@ -5,6 +5,7 @@ export interface IBooking extends Document {
   service: mongoose.Types.ObjectId;
   provider: mongoose.Types.ObjectId;
   date: Date;
+  time?: string;
   status: "scheduled" | "completed" | "cancelled";
 }
 
@@ -31,6 +32,11 @@ const bookingSchema = new Schema<IBooking>(
     date: {
       type: Date,
       required: true,
+    },
+
+    time: {
+      type: String,
+      required: false,
     },
 
     status: {

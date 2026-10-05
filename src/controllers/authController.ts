@@ -93,8 +93,21 @@ export const register = async (
       }
     }
 
+    const jwtSecret = process.env.JWT_SECRET || "bookeasy_super_secret_key_change_this_later";
+    const token = jwt.sign(
+      {
+        userId: memoryUser._id,
+        role: memoryUser.role,
+      },
+      jwtSecret,
+      {
+        expiresIn: "1d",
+      }
+    );
+
     res.status(201).json({
       message: "User registered successfully",
+      token,
       user: {
         id: memoryUser._id,
         name: memoryUser.name,

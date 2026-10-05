@@ -2,6 +2,13 @@ import { Response } from "express";
 import Booking from "../models/Booking.js";
 import Service from "../models/Service.js";
 import { AuthenticatedRequest } from "../middleware/authMiddleware.js";
+import { memoryStore, getIsInMemoryMode } from "../config/memoryStore.js";
+
+const getParamId = (param: string | string[] | undefined): string => {
+  if (Array.isArray(param)) return param[0] || "";
+  return param || "";
+};
+
 
 export const createBooking = async (
   req: AuthenticatedRequest,
@@ -15,7 +22,7 @@ export const createBooking = async (
       return;
     }
 
-    const { serviceId, date } = req.body;
+    const { serviceId, date, time } = req.body;
 
     if (!serviceId || !date) {
       res.status(400).json({
@@ -40,43 +47,93 @@ export const createBooking = async (
       return;
     }
 
-    const service = await Service.findById(serviceId);
+    if (getIsInMemoryMode()) {
+      const service = memoryStore.getServiceById(serviceId);
+      if (!service) {
+        res.status(404).json({ message: "Service not found" });
+        return;
+      }
 
-    if (!service) {
-      res.status(404).json({
-        message: "Service not found",
+      const memoryBooking = memoryStore.createBooking({
+        customerId: req.user.id,
+        serviceId,
+        date: bookingDate,
+        time: time || "",
+      });
+
+      if (!memoryBooking) {
+        res.status(400).json({ message: "Could not create booking" });
+        return;
+      }
+
+      res.status(201).json({
+        message: "Booking created successfully",
+        booking: memoryBooking,
       });
       return;
     }
 
-    const existingBooking = await Booking.findOne({
-      service: service._id,
-      date: bookingDate,
-      status: "scheduled",
-    });
+    try {
+      const service = await Service.findById(serviceId);
+      if (!service) {
+        const memServ = memoryStore.getServiceById(serviceId);
+        if (memServ) {
+          const memoryBooking = memoryStore.createBooking({
+            customerId: req.user.id,
+            serviceId,
+            date: bookingDate,
+            time: time || "",
+          });
+          res.status(201).json({
+            message: "Booking created successfully",
+            booking: memoryBooking,
+          });
+          return;
+        }
+        res.status(404).json({ message: "Service not found" });
+        return;
+      }
 
-    if (existingBooking) {
-      res.status(409).json({
-        message: "This service is already booked for this time",
+      const existingBooking = await Booking.findOne({
+        service: service._id,
+        date: bookingDate,
+        status: "scheduled",
       });
-      return;
+
+      if (existingBooking) {
+        res.status(409).json({
+          message: "This service is already booked for this time",
+        });
+        return;
+      }
+
+      const booking = await Booking.create({
+        customer: req.user.id,
+        service: service._id,
+        provider: service.provider,
+        date: bookingDate,
+        time: time || "",
+        status: "scheduled",
+      });
+
+      res.status(201).json({
+        message: "Booking created successfully",
+        booking,
+      });
+    } catch {
+      const memoryBooking = memoryStore.createBooking({
+        customerId: req.user.id,
+        serviceId,
+        date: bookingDate,
+        time: time || "",
+      });
+      res.status(201).json({
+        message: "Booking created successfully",
+        booking: memoryBooking,
+      });
     }
-
-    const booking = await Booking.create({
-      customer: req.user.id,
-      service: service._id,
-      provider: service.provider,
-      date: bookingDate,
-      status: "scheduled",
-    });
-
-    res.status(201).json({
-      message: "Booking created successfully",
-      booking,
-    });
   } catch (error) {
     console.error("Create booking error:", error);
-
     res.status(500).json({
       message: "Server error while creating booking",
     });
@@ -95,19 +152,27 @@ export const getCustomerBookings = async (
       return;
     }
 
-    const bookings = await Booking.find({
-      customer: req.user.id,
-    })
-      .populate("service")
-      .populate("provider", "name email")
-      .sort({ date: 1 });
+    if (getIsInMemoryMode()) {
+      const bookings = memoryStore.getBookings({ customerId: req.user.id });
+      res.status(200).json({ bookings });
+      return;
+    }
 
-    res.status(200).json({
-      bookings,
-    });
+    try {
+      const bookings = await Booking.find({
+        customer: req.user.id,
+      })
+        .populate("service")
+        .populate("provider", "name email")
+        .sort({ date: 1 });
+
+      res.status(200).json({ bookings });
+    } catch {
+      const bookings = memoryStore.getBookings({ customerId: req.user.id });
+      res.status(200).json({ bookings });
+    }
   } catch (error) {
     console.error("Get customer bookings error:", error);
-
     res.status(500).json({
       message: "Server error while fetching bookings",
     });
@@ -126,42 +191,67 @@ export const cancelBooking = async (
       return;
     }
 
-    const { id } = req.params;
+    const id = getParamId(req.params.id);
 
-    const booking = await Booking.findById(id);
-
-    if (!booking) {
-      res.status(404).json({
-        message: "Booking not found",
+    if (getIsInMemoryMode()) {
+      const updated = memoryStore.updateBookingStatus(id, "cancelled");
+      if (!updated) {
+        res.status(404).json({ message: "Booking not found" });
+        return;
+      }
+      res.status(200).json({
+        message: "Booking cancelled successfully",
+        booking: updated,
       });
       return;
     }
 
-    if (booking.customer.toString() !== req.user.id) {
-      res.status(403).json({
-        message: "You can only cancel your own bookings",
+    try {
+      const booking = await Booking.findById(id);
+
+      if (!booking) {
+        const updated = memoryStore.updateBookingStatus(id, "cancelled");
+        if (updated) {
+          res.status(200).json({
+            message: "Booking cancelled successfully",
+            booking: updated,
+          });
+          return;
+        }
+        res.status(404).json({ message: "Booking not found" });
+        return;
+      }
+
+      if (booking.customer.toString() !== req.user.id) {
+        res.status(403).json({
+          message: "You can only cancel your own bookings",
+        });
+        return;
+      }
+
+      if (booking.status !== "scheduled") {
+        res.status(400).json({
+          message: "Only scheduled bookings can be cancelled",
+        });
+        return;
+      }
+
+      booking.status = "cancelled";
+      await booking.save();
+
+      res.status(200).json({
+        message: "Booking cancelled successfully",
+        booking,
       });
-      return;
-    }
-
-    if (booking.status !== "scheduled") {
-      res.status(400).json({
-        message: "Only scheduled bookings can be cancelled",
+    } catch {
+      const updated = memoryStore.updateBookingStatus(id, "cancelled");
+      res.status(200).json({
+        message: "Booking cancelled successfully",
+        booking: updated,
       });
-      return;
     }
-
-    booking.status = "cancelled";
-
-    await booking.save();
-
-    res.status(200).json({
-      message: "Booking cancelled successfully",
-      booking,
-    });
   } catch (error) {
     console.error("Cancel booking error:", error);
-
     res.status(500).json({
       message: "Server error while cancelling booking",
     });
@@ -180,19 +270,27 @@ export const getProviderBookings = async (
       return;
     }
 
-    const bookings = await Booking.find({
-      provider: req.user.id,
-    })
-      .populate("customer", "name email")
-      .populate("service")
-      .sort({ date: 1 });
+    if (getIsInMemoryMode()) {
+      const bookings = memoryStore.getBookings({ providerId: req.user.id });
+      res.status(200).json({ bookings });
+      return;
+    }
 
-    res.status(200).json({
-      bookings,
-    });
+    try {
+      const bookings = await Booking.find({
+        provider: req.user.id,
+      })
+        .populate("customer", "name email")
+        .populate("service")
+        .sort({ date: 1 });
+
+      res.status(200).json({ bookings });
+    } catch {
+      const bookings = memoryStore.getBookings({ providerId: req.user.id });
+      res.status(200).json({ bookings });
+    }
   } catch (error) {
     console.error("Get provider bookings error:", error);
-
     res.status(500).json({
       message: "Server error while fetching provider bookings",
     });
@@ -211,42 +309,67 @@ export const completeBooking = async (
       return;
     }
 
-    const { id } = req.params;
+    const id = getParamId(req.params.id);
 
-    const booking = await Booking.findById(id);
-
-    if (!booking) {
-      res.status(404).json({
-        message: "Booking not found",
+    if (getIsInMemoryMode()) {
+      const updated = memoryStore.updateBookingStatus(id, "completed");
+      if (!updated) {
+        res.status(404).json({ message: "Booking not found" });
+        return;
+      }
+      res.status(200).json({
+        message: "Booking marked as completed",
+        booking: updated,
       });
       return;
     }
 
-    if (booking.provider.toString() !== req.user.id) {
-      res.status(403).json({
-        message: "You can only manage bookings for your services",
+    try {
+      const booking = await Booking.findById(id);
+
+      if (!booking) {
+        const updated = memoryStore.updateBookingStatus(id, "completed");
+        if (updated) {
+          res.status(200).json({
+            message: "Booking marked as completed",
+            booking: updated,
+          });
+          return;
+        }
+        res.status(404).json({ message: "Booking not found" });
+        return;
+      }
+
+      if (booking.provider.toString() !== req.user.id) {
+        res.status(403).json({
+          message: "You can only manage bookings for your services",
+        });
+        return;
+      }
+
+      if (booking.status !== "scheduled") {
+        res.status(400).json({
+          message: "Only scheduled bookings can be completed",
+        });
+        return;
+      }
+
+      booking.status = "completed";
+      await booking.save();
+
+      res.status(200).json({
+        message: "Booking marked as completed",
+        booking,
       });
-      return;
-    }
-
-    if (booking.status !== "scheduled") {
-      res.status(400).json({
-        message: "Only scheduled bookings can be completed",
+    } catch {
+      const updated = memoryStore.updateBookingStatus(id, "completed");
+      res.status(200).json({
+        message: "Booking marked as completed",
+        booking: updated,
       });
-      return;
     }
-
-    booking.status = "completed";
-
-    await booking.save();
-
-    res.status(200).json({
-      message: "Booking marked as completed",
-      booking,
-    });
   } catch (error) {
     console.error("Complete booking error:", error);
-
     res.status(500).json({
       message: "Server error while completing booking",
     });

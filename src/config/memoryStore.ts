@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
@@ -30,6 +32,7 @@ export interface MemoryBooking {
   provider: any;
   service: any;
   date: Date;
+  time?: string;
   status: "scheduled" | "completed" | "cancelled";
   createdAt: Date;
   updatedAt: Date;
@@ -50,10 +53,11 @@ export const getIsInMemoryMode = (): boolean => {
 const defaultProviderId = "650000000000000000000001";
 const defaultCustomerId = "650000000000000000000002";
 const userBmId = "650000000000000000000003";
+const userBmuId = "650000000000000000000004";
 
 const hashedDefaultPassword = bcrypt.hashSync("password123", 10);
 
-const users: MemoryUser[] = [
+const defaultUsers: MemoryUser[] = [
   {
     _id: defaultProviderId,
     name: "Apex Service Studio",
@@ -81,10 +85,64 @@ const users: MemoryUser[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
   },
+  {
+    _id: userBmuId,
+    name: "BM User",
+    email: "bmu@gmail.com",
+    password: hashedDefaultPassword,
+    role: "provider",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
 ];
 
-const services: MemoryService[] = [];
-const bookings: MemoryBooking[] = [];
+let users: MemoryUser[] = [...defaultUsers];
+let services: MemoryService[] = [];
+let bookings: MemoryBooking[] = [];
+
+// Persistence Storage Path
+const dataDir = path.resolve(process.cwd(), "data");
+const storePath = path.resolve(dataDir, "store.json");
+
+const loadFromDisk = () => {
+  try {
+    if (fs.existsSync(storePath)) {
+      const raw = fs.readFileSync(storePath, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.users) && parsed.users.length > 0) {
+        users = parsed.users;
+        // Ensure default users exist
+        for (const defU of defaultUsers) {
+          if (!users.some((u) => u.email.toLowerCase().trim() === defU.email.toLowerCase().trim())) {
+            users.push(defU);
+          }
+        }
+      }
+      if (Array.isArray(parsed.services)) {
+        services = parsed.services;
+      }
+      if (Array.isArray(parsed.bookings)) {
+        bookings = parsed.bookings;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not load memoryStore from disk:", err);
+  }
+};
+
+const saveToDisk = () => {
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.writeFileSync(storePath, JSON.stringify({ users, services, bookings }, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("Could not save memoryStore to disk:", err);
+  }
+};
+
+// Initial load
+loadFromDisk();
 
 // Helper ID Generator
 const generateId = () => Math.random().toString(16).substring(2, 14) + Date.now().toString(16).substring(0, 12);
@@ -115,6 +173,7 @@ export const memoryStore = {
       updatedAt: new Date(),
     };
     users.push(newUser);
+    saveToDisk();
     return newUser;
   },
 
@@ -144,6 +203,7 @@ export const memoryStore = {
       updatedAt: new Date(),
     };
     services.push(newService);
+    saveToDisk();
     return newService;
   },
 
@@ -155,6 +215,7 @@ export const memoryStore = {
       ...data,
       updatedAt: new Date(),
     };
+    saveToDisk();
     return services[index];
   },
 
@@ -162,6 +223,7 @@ export const memoryStore = {
     const index = services.findIndex((s) => s._id === id);
     if (index === -1) return false;
     services.splice(index, 1);
+    saveToDisk();
     return true;
   },
 
@@ -174,7 +236,7 @@ export const memoryStore = {
     });
   },
 
-  createBooking: (data: { customerId: string; serviceId: string; date: Date }) => {
+  createBooking: (data: { customerId: string; serviceId: string; date: Date; time?: string }) => {
     const service = services.find((s) => s._id === data.serviceId);
     const customer = users.find((u) => u._id === data.customerId);
     if (!service || !customer) return null;
@@ -187,11 +249,13 @@ export const memoryStore = {
       provider: provider ? { _id: provider._id, name: provider.name, email: provider.email } : service.provider,
       service: { _id: service._id, name: service.name, price: service.price, duration: service.duration, image: service.image, category: service.category },
       date: new Date(data.date),
+      time: data.time || "",
       status: "scheduled",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     bookings.push(newBooking);
+    saveToDisk();
     return newBooking;
   },
 
@@ -200,6 +264,7 @@ export const memoryStore = {
     if (!booking) return null;
     booking.status = status;
     booking.updatedAt = new Date();
+    saveToDisk();
     return booking;
   },
 };
