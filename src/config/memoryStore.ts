@@ -228,6 +228,15 @@ export const memoryStore = {
   },
 
   // BOOKING METHODS
+  isSlotBooked: (serviceId: string, date: Date, time?: string) => {
+    return bookings.some((b) => {
+      if (b.status !== "scheduled") return false;
+      const sId = typeof b.service === "object" ? b.service?._id : b.service;
+      if (sId !== serviceId) return false;
+      return isSameTimeSlot(b.date, b.time, date, time);
+    });
+  },
+
   getBookings: (filter: { customerId?: string; providerId?: string }) => {
     return bookings.filter((b) => {
       if (filter.customerId) {
@@ -285,3 +294,27 @@ export const memoryStore = {
     return booking;
   },
 };
+
+export const isSameTimeSlot = (
+  date1: Date | string,
+  time1: string | undefined,
+  date2: Date | string,
+  time2: string | undefined
+): boolean => {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return false;
+
+  const sameTimestamp = d1.getTime() === d2.getTime();
+  const sameDay = d1.toISOString().split("T")[0] === d2.toISOString().split("T")[0];
+
+  const t1 = (time1 || "").trim().toLowerCase();
+  const t2 = (time2 || "").trim().toLowerCase();
+
+  if (t1 && t2) {
+    return t1 === t2 && (sameDay || sameTimestamp);
+  }
+
+  return sameTimestamp || (sameDay && !t1 && !t2);
+};
+

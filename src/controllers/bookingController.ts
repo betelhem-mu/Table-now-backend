@@ -2,7 +2,7 @@ import { Response } from "express";
 import Booking from "../models/Booking.js";
 import Service from "../models/Service.js";
 import { AuthenticatedRequest } from "../middleware/authMiddleware.js";
-import { memoryStore, getIsInMemoryMode } from "../config/memoryStore.js";
+import { memoryStore, getIsInMemoryMode, isSameTimeSlot } from "../config/memoryStore.js";
 
 const getParamId = (param: string | string[] | undefined): string => {
   if (Array.isArray(param)) return param[0] || "";
@@ -45,6 +45,34 @@ export const createBooking = async (
         message: "Booking date must be in the future",
       });
       return;
+    }
+
+    // Check if service/time slot is already booked
+    if (memoryStore.isSlotBooked(serviceId, bookingDate, time)) {
+      res.status(400).json({
+        message: "This service and time slot is already booked",
+      });
+      return;
+    }
+
+    if (!getIsInMemoryMode()) {
+      try {
+        const dbBookings = await Booking.find({
+          service: serviceId,
+          status: "scheduled",
+        });
+        const isDbBooked = dbBookings.some((b) =>
+          isSameTimeSlot(b.date, b.time, bookingDate, time)
+        );
+        if (isDbBooked) {
+          res.status(400).json({
+            message: "This service and time slot is already booked",
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Atlas booking conflict check skipped/fallback used:", err);
+      }
     }
 
     const memoryBooking = memoryStore.createBooking({
