@@ -186,7 +186,17 @@ export const memoryStore = {
     return services.find((s) => s._id === id);
   },
 
+  getServiceByName: (name: string) => {
+    const norm = name.toLowerCase().trim();
+    return services.find((s) => s.name.toLowerCase().trim() === norm) || null;
+  },
+
   createService: (data: { name: string; description: string; price: number; duration: number; category?: string; image?: string; providerId: string }) => {
+    // Prevent duplicate service names (case-insensitive)
+    const norm = data.name.toLowerCase().trim();
+    const existing = services.find((s) => s.name.toLowerCase().trim() === norm);
+    if (existing) return null;
+
     const providerUser = users.find((u) => u._id === data.providerId);
     const newService: MemoryService = {
       _id: generateId(),

@@ -117,6 +117,32 @@ export const createService = async (
       return;
     }
 
+    // --- Duplicate service name check ---
+    const trimmedName = name.trim().toLowerCase();
+
+    // Check memoryStore first
+    const memDuplicate = memoryStore.getServiceByName(trimmedName);
+    if (memDuplicate) {
+      res.status(409).json({ message: `A service named "${name.trim()}" already exists. Please use a different name.` });
+      return;
+    }
+
+    // If using MongoDB, also check the DB
+    if (!getIsInMemoryMode()) {
+      try {
+        const dbDuplicate = await Service.findOne({
+          name: { $regex: new RegExp(`^${trimmedName}$`, "i") },
+        });
+        if (dbDuplicate) {
+          res.status(409).json({ message: `A service named "${name.trim()}" already exists. Please use a different name.` });
+          return;
+        }
+      } catch {
+        // If DB check fails, fall through — memoryStore already confirmed no duplicate
+      }
+    }
+    // --- End duplicate check ---
+
     const newServ = memoryStore.createService({
       name,
       description,
@@ -126,6 +152,11 @@ export const createService = async (
       image,
       providerId: req.user.id,
     });
+
+    if (!newServ) {
+      res.status(409).json({ message: `A service named "${name.trim()}" already exists. Please use a different name.` });
+      return;
+    }
 
     if (!getIsInMemoryMode()) {
       try {
