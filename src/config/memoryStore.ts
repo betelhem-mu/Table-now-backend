@@ -8,7 +8,10 @@ export interface MemoryUser {
   name: string;
   email: string;
   password: string;
-  role: "customer" | "provider";
+  role: "customer" | "provider" | "admin";
+  providerStatus?: "pending" | "approved" | "rejected";
+  isSuspended?: boolean;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +53,7 @@ export const getIsInMemoryMode = (): boolean => {
 };
 
 // Initial Default Accounts
+const defaultAdminId = "650000000000000000000000";
 const defaultProviderId = "650000000000000000000001";
 const defaultCustomerId = "650000000000000000000002";
 const userBmId = "650000000000000000000003";
@@ -59,11 +63,24 @@ const hashedDefaultPassword = bcrypt.hashSync("password123", 10);
 
 const defaultUsers: MemoryUser[] = [
   {
+    _id: defaultAdminId,
+    name: "System Administrator",
+    email: "admin@example.com",
+    password: hashedDefaultPassword,
+    role: "admin",
+    providerStatus: "approved",
+    isSuspended: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
     _id: defaultProviderId,
     name: "Apex Service Studio",
     email: "provider@example.com",
     password: hashedDefaultPassword,
     role: "provider",
+    providerStatus: "approved",
+    isSuspended: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -73,6 +90,8 @@ const defaultUsers: MemoryUser[] = [
     email: "customer@example.com",
     password: hashedDefaultPassword,
     role: "customer",
+    providerStatus: "approved",
+    isSuspended: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -82,6 +101,8 @@ const defaultUsers: MemoryUser[] = [
     email: "bm9577971@gmail.com",
     password: hashedDefaultPassword,
     role: "provider",
+    providerStatus: "approved",
+    isSuspended: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -91,6 +112,8 @@ const defaultUsers: MemoryUser[] = [
     email: "bmu@gmail.com",
     password: hashedDefaultPassword,
     role: "provider",
+    providerStatus: "approved",
+    isSuspended: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -110,7 +133,11 @@ const loadFromDisk = () => {
       const raw = fs.readFileSync(storePath, "utf-8");
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.users) && parsed.users.length > 0) {
-        users = parsed.users;
+        users = parsed.users.map((u: MemoryUser) => ({
+          ...u,
+          providerStatus: u.providerStatus || "approved",
+          isSuspended: u.isSuspended ?? false,
+        }));
         // Ensure default users exist
         for (const defU of defaultUsers) {
           if (!users.some((u) => u.email.toLowerCase().trim() === defU.email.toLowerCase().trim())) {
@@ -149,6 +176,10 @@ const generateId = () => Math.random().toString(16).substring(2, 14) + Date.now(
 
 export const memoryStore = {
   // USER METHODS
+  getUsers: () => {
+    return users;
+  },
+
   findUserByEmail: (email: string) => {
     const norm = email.toLowerCase().trim();
     return users.find((u) => u.email.toLowerCase().trim() === norm);
@@ -158,23 +189,46 @@ export const memoryStore = {
     return users.find((u) => u._id === id);
   },
 
-  createUser: (data: { name: string; email: string; password: string; role: "customer" | "provider" }) => {
+  createUser: (data: {
+    name: string;
+    email: string;
+    password: string;
+    role: "customer" | "provider" | "admin";
+    providerStatus?: "pending" | "approved" | "rejected";
+  }) => {
     const norm = data.email.toLowerCase().trim();
     const existing = users.find((u) => u.email.toLowerCase().trim() === norm);
     if (existing) return null;
+
+    const userRole = data.role || "customer";
+    const initialProviderStatus = data.providerStatus || (userRole === "provider" ? "pending" : "approved");
 
     const newUser: MemoryUser = {
       _id: generateId(),
       name: data.name.trim(),
       email: norm,
       password: data.password,
-      role: data.role || "customer",
+      role: userRole,
+      providerStatus: initialProviderStatus,
+      isSuspended: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     users.push(newUser);
     saveToDisk();
     return newUser;
+  },
+
+  updateUser: (id: string, updates: Partial<MemoryUser>) => {
+    const userIndex = users.findIndex((u) => u._id === id);
+    if (userIndex === -1) return null;
+    users[userIndex] = {
+      ...users[userIndex],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    saveToDisk();
+    return users[userIndex];
   },
 
   // SERVICE METHODS

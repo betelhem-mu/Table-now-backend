@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { memoryStore } from "../config/memoryStore.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: "customer" | "provider";
+    role: "customer" | "provider" | "admin";
+    providerStatus?: "pending" | "approved" | "rejected";
+    isSuspended?: boolean;
   };
 }
 
@@ -45,12 +48,23 @@ const authMiddleware = (
 
     const decoded = jwt.verify(token, getJwtSecret()) as {
       userId: string;
-      role: "customer" | "provider";
+      role: "customer" | "provider" | "admin";
     };
+
+    // Check account status in memoryStore
+    const existingUser = memoryStore.findUserById(decoded.userId);
+    if (existingUser && existingUser.isSuspended) {
+      res.status(403).json({
+        message: "Your account has been suspended. Please contact an administrator.",
+      });
+      return;
+    }
 
     req.user = {
       id: decoded.userId,
-      role: decoded.role,
+      role: existingUser ? existingUser.role : decoded.role,
+      providerStatus: existingUser?.providerStatus || "approved",
+      isSuspended: existingUser?.isSuspended ?? false,
     };
 
     next();
@@ -73,11 +87,18 @@ export const optionalAuthMiddleware = (
       if (token) {
         const decoded = jwt.verify(token, getJwtSecret()) as {
           userId: string;
-          role: "customer" | "provider";
+          role: "customer" | "provider" | "admin";
         };
+        const existingUser = memoryStore.findUserById(decoded.userId);
+        if (existingUser && existingUser.isSuspended) {
+          next();
+          return;
+        }
         req.user = {
           id: decoded.userId,
-          role: decoded.role,
+          role: existingUser ? existingUser.role : decoded.role,
+          providerStatus: existingUser?.providerStatus || "approved",
+          isSuspended: existingUser?.isSuspended ?? false,
         };
       }
     }

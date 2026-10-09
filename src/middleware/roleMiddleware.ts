@@ -2,7 +2,7 @@ import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "./authMiddleware.js";
 
 const roleMiddleware = (
-  ...allowedRoles: ("customer" | "provider")[]
+  ...allowedRoles: ("customer" | "provider" | "admin")[]
 ) => {
   return (
     req: AuthenticatedRequest,

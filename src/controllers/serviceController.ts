@@ -97,6 +97,11 @@ export const createService = async (
       return;
     }
 
+    if (req.user.role === "provider" && req.user.providerStatus !== "approved") {
+      res.status(403).json({ message: "Your service provider application is pending approval or has been rejected. You cannot manage services until approved by an admin." });
+      return;
+    }
+
     const { name, description, price, duration, category, image } = req.body;
 
     if (!name || !description || price === undefined || !duration) {
@@ -191,6 +196,11 @@ export const updateService = async (
       return;
     }
 
+    if (req.user.role === "provider" && req.user.providerStatus !== "approved") {
+      res.status(403).json({ message: "Your service provider application is pending approval or has been rejected. You cannot manage services until approved by an admin." });
+      return;
+    }
+
     const id = getParamId(req.params.id);
     const { name, description, price, duration, category, image } = req.body;
 
@@ -258,6 +268,11 @@ export const deleteService = async (
   try {
     if (!req.user) {
       res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    if (req.user.role === "provider" && req.user.providerStatus !== "approved") {
+      res.status(403).json({ message: "Your service provider application is pending approval or has been rejected. You cannot manage services until approved by an admin." });
       return;
     }
 

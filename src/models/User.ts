@@ -4,7 +4,10 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: "customer" | "provider";
+  role: "customer" | "provider" | "admin";
+  providerStatus?: "pending" | "approved" | "rejected";
+  isSuspended?: boolean;
+  rejectionReason?: string;
 }
 
 const userSchema = new Schema<IUser>(
@@ -30,8 +33,24 @@ const userSchema = new Schema<IUser>(
 
     role: {
       type: String,
-      enum: ["customer", "provider"],
+      enum: ["customer", "provider", "admin"],
       default: "customer",
+    },
+
+    providerStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "approved",
+    },
+
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+
+    rejectionReason: {
+      type: String,
+      default: "",
     },
   },
   {
