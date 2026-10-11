@@ -357,6 +357,26 @@ export const getAdminServices = async (
     const searchQuery = (req.query.search as string || "").toLowerCase().trim();
     let services = memoryStore.getServices() || [];
 
+    if (!getIsInMemoryMode()) {
+      try {
+        const dbServices = await Service.find()
+          .populate("provider", "name email")
+          .sort({ createdAt: -1 });
+
+        const existingIds = new Set(dbServices.map((s) => s._id.toString()));
+        const combined = [...dbServices];
+
+        for (const mServ of services) {
+          if (!existingIds.has(mServ._id)) {
+            combined.push(mServ as any);
+          }
+        }
+        services = combined as any;
+      } catch (err) {
+        console.warn("MongoDB admin services fetch skipped:", err);
+      }
+    }
+
     if (searchQuery) {
       services = services.filter(
         (s) =>
@@ -404,3 +424,128 @@ export const getAdminBookings = async (
     res.status(500).json({ message: "Server error fetching platform bookings" });
   }
 };
+
+// 10. Delete User Permanently
+export const deleteUser = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const id = getParamId(req.params.id);
+
+    let user = memoryStore.findUserById(id);
+    let targetEmail = user?.email;
+
+    if (!user && !getIsInMemoryMode()) {
+      try {
+        const dbUser = await User.findById(id);
+        if (dbUser) {
+          targetEmail = dbUser.email;
+        }
+      } catch (e) {}
+    }
+
+    if (!user && !targetEmail) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    const userRole = user?.role;
+    const userName = user?.name || targetEmail;
+
+    // Security Guard: Prevent deleting logged-in admin
+    if (req.user?.id === id) {
+      res.status(400).json({ message: "You cannot delete your own admin account." });
+      return;
+    }
+
+    // Security Guard: Prevent deleting last administrator
+    if (userRole === "admin") {
+      const activeAdmins = memoryStore
+        .getUsers()
+        .filter((u) => u.role === "admin");
+      if (activeAdmins.length <= 1) {
+        res.status(400).json({ message: "Cannot delete the last administrator account." });
+        return;
+      }
+    }
+
+    // Remove from memoryStore & store.json by ID and Email
+    memoryStore.deleteUser(id);
+    if (targetEmail) {
+      memoryStore.deleteUserByEmail(targetEmail);
+    }
+
+    // Also remove from MongoDB Atlas if connected by Email & ID
+    if (!getIsInMemoryMode() && targetEmail) {
+      try {
+        await User.deleteMany({
+          $or: [
+            { email: targetEmail.toLowerCase().trim() },
+            { _id: id }
+          ]
+        });
+      } catch (err) {
+        console.warn("MongoDB delete user sync error:", err);
+      }
+    }
+
+    res.status(200).json({ message: `User account '${userName}' (${targetEmail}) deleted successfully.` });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({ message: "Server error deleting user account" });
+  }
+};
+
+// 11. Update Provider Status Directly (Approve / Deactivate)
+export const updateProviderStatusDirect = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const id = getParamId(req.params.id);
+    const { providerStatus } = req.body;
+
+    if (!providerStatus || !["pending", "approved", "rejected"].includes(providerStatus)) {
+      res.status(400).json({ message: "Valid providerStatus ('pending', 'approved', 'rejected') is required." });
+      return;
+    }
+
+    const user = memoryStore.findUserById(id);
+    if (!user || user.role !== "provider") {
+      res.status(404).json({ message: "Provider user not found." });
+      return;
+    }
+
+    const updatedUser = memoryStore.updateUser(id, {
+      providerStatus,
+      rejectionReason: providerStatus === "rejected" ? "Provider account deactivated by administrator." : "",
+    });
+
+    if (!getIsInMemoryMode()) {
+      try {
+        await User.findByIdAndUpdate(id, {
+          providerStatus,
+          rejectionReason: providerStatus === "rejected" ? "Provider account deactivated by administrator." : "",
+        });
+      } catch (err) {
+        console.warn("MongoDB provider status sync skipped:", err);
+      }
+    }
+
+    res.status(200).json({
+      message: `Provider status set to '${providerStatus}' successfully.`,
+      user: {
+        id: updatedUser?._id,
+        name: updatedUser?.name,
+        email: updatedUser?.email,
+        role: updatedUser?.role,
+        providerStatus: updatedUser?.providerStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Update provider status direct error:", error);
+    res.status(500).json({ message: "Server error updating provider status" });
+  }
+};
+

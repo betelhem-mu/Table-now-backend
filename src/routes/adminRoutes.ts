@@ -9,6 +9,8 @@ import {
   rejectProviderApplication,
   getUsers,
   updateUserStatus,
+  deleteUser,
+  updateProviderStatusDirect,
   getAdminServices,
   getAdminBookings,
 } from "../controllers/adminController.js";
@@ -31,6 +33,8 @@ router.patch("/provider-applications/:id/reject", rejectProviderApplication);
 // User Management
 router.get("/users", getUsers);
 router.patch("/users/:id/status", updateUserStatus);
+router.delete("/users/:id", deleteUser);
+router.patch("/users/:id/provider-status", updateProviderStatusDirect);
 
 // Service & Booking Oversight
 router.get("/services", getAdminServices);

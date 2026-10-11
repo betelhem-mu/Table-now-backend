@@ -138,11 +138,11 @@ const loadFromDisk = () => {
           providerStatus: u.providerStatus || "approved",
           isSuspended: u.isSuspended ?? false,
         }));
-        // Ensure default users exist
-        for (const defU of defaultUsers) {
-          if (!users.some((u) => u.email.toLowerCase().trim() === defU.email.toLowerCase().trim())) {
-            users.push(defU);
-          }
+        // Ensure at least one admin account exists as fallback if no admins remain
+        const hasAdmin = users.some((u) => u.role === "admin");
+        if (!hasAdmin) {
+          const defaultAdmin = defaultUsers.find((u) => u.role === "admin");
+          if (defaultAdmin) users.push(defaultAdmin);
         }
       }
       if (Array.isArray(parsed.services)) {
@@ -231,6 +231,23 @@ export const memoryStore = {
     return users[userIndex];
   },
 
+  deleteUser: (id: string) => {
+    const userIndex = users.findIndex((u) => u._id === id);
+    if (userIndex === -1) return false;
+    users.splice(userIndex, 1);
+    saveToDisk();
+    return true;
+  },
+
+  deleteUserByEmail: (email: string) => {
+    const norm = email.toLowerCase().trim();
+    const userIndex = users.findIndex((u) => u.email.toLowerCase().trim() === norm);
+    if (userIndex === -1) return false;
+    users.splice(userIndex, 1);
+    saveToDisk();
+    return true;
+  },
+
   // SERVICE METHODS
   getServices: () => {
     return services;
@@ -287,6 +304,12 @@ export const memoryStore = {
     const index = services.findIndex((s) => s._id === id);
     if (index === -1) return false;
     services.splice(index, 1);
+    saveToDisk();
+    return true;
+  },
+
+  clearAllServices: () => {
+    services = [];
     saveToDisk();
     return true;
   },

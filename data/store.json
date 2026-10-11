@@ -12,85 +12,27 @@
       "updatedAt": "2026-10-06T19:37:30.860Z"
     },
     {
-      "_id": "650000000000000000000001",
-      "name": "Apex Service Studio",
-      "email": "provider@example.com",
-      "password": "$2b$10$PIkn8epJCwDxP/SFU.hIcuSaWehD.yzvM2bHwKM4jv9t224nu/Tyq",
-      "role": "provider",
-      "createdAt": "2026-10-06T19:37:30.860Z",
-      "updatedAt": "2026-10-06T19:37:30.860Z"
-    },
-    {
-      "_id": "650000000000000000000002",
-      "name": "Alex Johnson",
-      "email": "customer@example.com",
-      "password": "$2b$10$PIkn8epJCwDxP/SFU.hIcuSaWehD.yzvM2bHwKM4jv9t224nu/Tyq",
-      "role": "customer",
-      "createdAt": "2026-10-06T19:37:30.860Z",
-      "updatedAt": "2026-10-06T19:37:30.860Z"
-    },
-    {
-      "_id": "650000000000000000000003",
-      "name": "BM User",
-      "email": "bm9577971@gmail.com",
-      "password": "$2b$10$PIkn8epJCwDxP/SFU.hIcuSaWehD.yzvM2bHwKM4jv9t224nu/Tyq",
-      "role": "provider",
-      "createdAt": "2026-10-06T19:37:30.860Z",
-      "updatedAt": "2026-10-06T19:37:30.860Z"
-    },
-    {
-      "_id": "650000000000000000000004",
-      "name": "BM User",
-      "email": "bmu@gmail.com",
-      "password": "$2b$10$PIkn8epJCwDxP/SFU.hIcuSaWehD.yzvM2bHwKM4jv9t224nu/Tyq",
-      "role": "provider",
-      "createdAt": "2026-10-06T19:37:30.860Z",
-      "updatedAt": "2026-10-06T19:37:30.860Z"
-    },
-    {
-      "_id": "168f94f3a4621a112bd5ac5",
-      "name": "lemlem",
-      "email": "lemlem@gmail.com",
-      "password": "$2b$10$iJqiu0aCtek.M4cUnt/w7ucF8zE.z4OWy4qgJtjc89TEvAz6NtI9e",
-      "role": "provider",
-      "createdAt": "2026-10-06T19:42:41.861Z",
-      "updatedAt": "2026-10-06T19:42:41.861Z"
-    },
-    {
-      "_id": "67055c8ee5bf1a112be3b44",
-      "name": "tadese",
-      "email": "tade@gmail.com",
-      "password": "$2b$10$URJphH2yI7i15lfemBIQkOISSkwExoFzb1Qx9EKR.71MSj8jNoKFi",
-      "role": "customer",
-      "createdAt": "2026-10-06T19:43:39.332Z",
-      "updatedAt": "2026-10-06T19:43:39.332Z"
-    },
-    {
-      "_id": "69c600b741c21a114f8f1e4",
-      "name": "Test Provider",
-      "email": "testprovider@example.com",
-      "password": "$2b$10$OxvGf9ymmMIBJ6pGP8sl.egeqX1TEgJrwWXaUdu6itqw8ZnxkiTLq",
-      "role": "provider",
-      "createdAt": "2026-10-07T06:07:01.604Z",
-      "updatedAt": "2026-10-07T06:07:01.604Z"
-    },
-    {
-      "_id": "12d504ba84d31a1168de92b",
-      "name": "Abebe",
-      "email": "abe@gmail.com",
-      "password": "$2b$10$QZoAwtYuJ1c3sT7HdEs0WuIMy0unHndHWA0mV/AlTjnYLpsLGZ8gS",
-      "role": "customer",
-      "createdAt": "2026-10-07T13:29:21.451Z",
-      "updatedAt": "2026-10-07T13:29:21.451Z"
-    },
-    {
-      "_id": "8c70613b92b71a120908742",
+      "_id": "c46466e9f0581a125a28553",
       "name": "eyerus",
       "email": "eyu@gmail.com",
-      "password": "$2b$10$UIMv7eV.m6Zz5BnTx.TocOn2v3zCQ6MXIpeYujGp4Ut1CXONVmKBG",
+      "password": "$2b$10$ejeVe5r8meiVwbMhbhlmAeOG8uFeMWMAwohSpFYwWXE3/9hWZFYYq",
+      "role": "provider",
+      "providerStatus": "approved",
+      "isSuspended": false,
+      "createdAt": "2026-10-10T11:46:10.387Z",
+      "updatedAt": "2026-10-11T06:13:01.582Z",
+      "rejectionReason": ""
+    },
+    {
+      "_id": "0e058dbdf1021a125f2ab56",
+      "name": "hermi",
+      "email": "hermi@gmail.com",
+      "password": "$2b$10$enjG7SkX2Cc8XxVl38FE4eMkpyT6PU2PojF/5NrmKGJ0cT7Vjsm9a",
       "role": "customer",
-      "createdAt": "2026-10-09T12:08:25.154Z",
-      "updatedAt": "2026-10-09T12:08:25.154Z"
+      "providerStatus": "approved",
+      "isSuspended": false,
+      "createdAt": "2026-10-10T13:13:42.998Z",
+      "updatedAt": "2026-10-10T13:13:42.998Z"
     }
   ],
   "services": [

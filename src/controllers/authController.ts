@@ -167,8 +167,9 @@ export const login = async (
       rejectionReason?: string;
     } | null = null;
 
-    // First check memoryStore (default seeded provider/customer & memory registered)
+    // Search for user in memoryStore (the source of truth for active accounts)
     const memoryUser = memoryStore.findUserByEmail(normalizedEmail);
+
     if (memoryUser) {
       foundUser = {
         id: memoryUser._id,
@@ -180,37 +181,25 @@ export const login = async (
         isSuspended: memoryUser.isSuspended ?? false,
         rejectionReason: memoryUser.rejectionReason || "",
       };
-    } else if (!getIsInMemoryMode()) {
-      // Check Mongo Atlas
-      try {
-        const dbUser = await User.findOne({ email: normalizedEmail });
-        if (dbUser) {
-          foundUser = {
-            id: dbUser._id.toString(),
-            name: dbUser.name,
-            email: dbUser.email,
-            passwordHash: dbUser.password,
-            role: dbUser.role,
-            providerStatus: dbUser.providerStatus || "approved",
-            isSuspended: dbUser.isSuspended ?? false,
-            rejectionReason: dbUser.rejectionReason || "",
-          };
-        }
-      } catch (dbError) {
-        console.warn("Mongo Atlas user lookup failed:", dbError);
-      }
     }
 
     if (!foundUser) {
       res.status(401).json({
-        message: "Invalid email or password",
+        message: "Unable to log in. This account does not exist or has been deleted.",
       });
       return;
     }
 
     if (foundUser.isSuspended) {
       res.status(403).json({
-        message: "Your account has been suspended. Please contact an administrator.",
+        message: "Unable to log in. Your account has been suspended by an administrator.",
+      });
+      return;
+    }
+
+    if (foundUser.role === "provider" && foundUser.providerStatus === "rejected") {
+      res.status(403).json({
+        message: "Unable to log in. Your provider account has been deactivated or rejected by an administrator.",
       });
       return;
     }
