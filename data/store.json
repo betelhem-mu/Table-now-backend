@@ -9,7 +9,8 @@
       "providerStatus": "approved",
       "isSuspended": false,
       "createdAt": "2026-10-06T19:37:30.860Z",
-      "updatedAt": "2026-10-06T19:37:30.860Z"
+      "updatedAt": "2026-10-11T19:08:18.128Z",
+      "theme": "dark"
     },
     {
       "_id": "c46466e9f0581a125a28553",
@@ -32,18 +33,31 @@
       "providerStatus": "approved",
       "isSuspended": false,
       "createdAt": "2026-10-10T13:13:42.998Z",
-      "updatedAt": "2026-10-10T13:13:42.998Z"
+      "updatedAt": "2026-10-11T19:07:00.903Z",
+      "theme": "light"
     },
     {
-      "_id": "cbdf4c54f90a1a12a2c64ec",
-      "name": "Persisted User",
-      "email": "testuser_persisted@example.com",
-      "password": "$2b$10$V59vcOo2dCIfMPNQ0y2deeTmrL6CG07yw7fjUrOFHf/f9ZRzJJB1m",
+      "_id": "6dcbfdf2ed6a1a12c27d199",
+      "name": "Abebe",
+      "email": "abe@gmail.com",
+      "password": "$2b$10$9N0T9s06enZDMxnr3CTwR.b3eZhMd1Bg5Hmjsc9itxMWjyaId1176",
       "role": "customer",
       "providerStatus": "approved",
       "isSuspended": false,
-      "createdAt": "2026-10-11T08:55:14.924Z",
-      "updatedAt": "2026-10-11T08:55:14.924Z"
+      "createdAt": "2026-10-11T18:09:29.497Z",
+      "updatedAt": "2026-10-11T18:09:29.497Z"
+    },
+    {
+      "_id": "dd06eda52ee71a12c2fc9e7",
+      "name": "Luil",
+      "email": "luil@gmail.com",
+      "password": "$2b$10$SstKzq/0zPFVqOXbRfegWOTq/cds0pnhD5DD9YK0jK5vX1hkulY2u",
+      "role": "provider",
+      "providerStatus": "approved",
+      "isSuspended": false,
+      "createdAt": "2026-10-11T18:18:11.815Z",
+      "updatedAt": "2026-10-11T18:26:00.374Z",
+      "rejectionReason": ""
     }
   ],
   "services": [
@@ -80,52 +94,20 @@
       "updatedAt": "2026-10-07T12:32:35.364Z"
     },
     {
-      "_id": "65b1e73fbd2d1a116677eb9",
-      "name": "Conflict Test Therapy",
-      "description": "Test service for conflict validation.",
-      "price": 80,
+      "_id": "c53a12857eca1a12c3873c9",
+      "name": "Photography Session",
+      "description": "A scheduled portrait or personal photography sessio",
+      "price": 100,
       "duration": 30,
-      "category": "Health & Fitness",
-      "image": "",
-      "provider": {
-        "_id": "650000000000000000000001",
-        "name": "Apex Service Studio",
-        "email": "provider@example.com"
-      },
-      "createdAt": "2026-10-07T12:47:23.834Z",
-      "updatedAt": "2026-10-07T12:47:23.834Z"
-    },
-    {
-      "_id": "f6e67763373e1a11668f1b2",
-      "name": "Deep Tissue Body Therapy",
-      "description": "Relaxing full body therapeutic massage.",
-      "price": 110,
-      "duration": 60,
       "category": "Beauty & Wellness",
-      "image": "",
+      "image": "[Image File Uploaded]",
       "provider": {
-        "_id": "650000000000000000000001",
-        "name": "Apex Service Studio",
-        "email": "provider@example.com"
+        "_id": "dd06eda52ee71a12c2fc9e7",
+        "name": "Luil",
+        "email": "luil@gmail.com"
       },
-      "createdAt": "2026-10-07T12:48:58.802Z",
-      "updatedAt": "2026-10-07T12:48:58.802Z"
-    },
-    {
-      "_id": "05047a5e172a1a11669c76b",
-      "name": "Executive Coaching Session",
-      "description": "1-on-1 strategic leadership coaching.",
-      "price": 150,
-      "duration": 45,
-      "category": "Education & Coaching",
-      "image": "",
-      "provider": {
-        "_id": "650000000000000000000001",
-        "name": "Apex Service Studio",
-        "email": "provider@example.com"
-      },
-      "createdAt": "2026-10-07T12:49:53.515Z",
-      "updatedAt": "2026-10-07T12:49:53.515Z"
+      "createdAt": "2026-10-11T18:27:39.593Z",
+      "updatedAt": "2026-10-11T18:27:39.593Z"
     }
   ],
   "bookings": [
@@ -362,6 +344,58 @@
       "status": "scheduled",
       "createdAt": "2026-10-07T13:31:49.825Z",
       "updatedAt": "2026-10-07T13:31:49.825Z"
+    },
+    {
+      "_id": "209dc2cb10141a12b9cabbb",
+      "customer": {
+        "_id": "0e058dbdf1021a125f2ab56",
+        "name": "hermi",
+        "email": "hermi@gmail.com"
+      },
+      "provider": {
+        "_id": "650000000000000000000001",
+        "name": "Apex Service Studio",
+        "email": "provider@example.com"
+      },
+      "service": {
+        "_id": "65b1e73fbd2d1a116677eb9",
+        "name": "Conflict Test Therapy",
+        "price": 80,
+        "duration": 30,
+        "image": "",
+        "category": "Health & Fitness"
+      },
+      "date": "2026-10-12T21:00:00.000Z",
+      "time": "09:00",
+      "status": "cancelled",
+      "createdAt": "2026-10-11T15:37:30.300Z",
+      "updatedAt": "2026-10-11T16:14:58.413Z"
+    },
+    {
+      "_id": "013e243205ae1a12c39914c",
+      "customer": {
+        "_id": "6dcbfdf2ed6a1a12c27d199",
+        "name": "Abebe",
+        "email": "abe@gmail.com"
+      },
+      "provider": {
+        "_id": "dd06eda52ee71a12c2fc9e7",
+        "name": "Luil",
+        "email": "luil@gmail.com"
+      },
+      "service": {
+        "_id": "c53a12857eca1a12c3873c9",
+        "name": "Photography Session",
+        "price": 100,
+        "duration": 30,
+        "image": "[Image File Uploaded]",
+        "category": "Beauty & Wellness"
+      },
+      "date": "2026-10-12T21:00:00.000Z",
+      "time": "09:00",
+      "status": "scheduled",
+      "createdAt": "2026-10-11T18:28:52.684Z",
+      "updatedAt": "2026-10-11T18:28:52.684Z"
     }
   ]
 }

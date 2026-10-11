@@ -39,7 +39,7 @@ router.patch(
 router.delete(
   "/:id",
   authMiddleware,
-  roleMiddleware("provider"),
+  roleMiddleware("provider", "admin"),
   deleteService
 );
 

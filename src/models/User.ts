@@ -8,6 +8,9 @@ export interface IUser extends Document {
   providerStatus?: "pending" | "approved" | "rejected";
   isSuspended?: boolean;
   rejectionReason?: string;
+  theme?: "light" | "dark" | "system";
+  deletionRequested?: boolean;
+  deletionRequestedAt?: Date;
 }
 
 const userSchema = new Schema<IUser>(
@@ -51,6 +54,18 @@ const userSchema = new Schema<IUser>(
     rejectionReason: {
       type: String,
       default: "",
+    },
+    theme: {
+      type: String,
+      enum: ["light", "dark", "system"],
+      default: "system",
+    },
+    deletionRequested: {
+      type: Boolean,
+      default: false,
+    },
+    deletionRequestedAt: {
+      type: Date,
     },
   },
   {

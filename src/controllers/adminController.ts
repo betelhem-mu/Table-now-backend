@@ -549,3 +549,42 @@ export const updateProviderStatusDirect = async (
   }
 };
 
+// 12. Delete Service Permanently (Admin)
+export const deleteAdminService = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const id = getParamId(req.params.id);
+
+    // Verify service exists in memoryStore or MongoDB
+    let service = memoryStore.getServiceById(id);
+    let serviceName = service?.name || "Service";
+
+    if (!service && !getIsInMemoryMode()) {
+      try {
+        const dbService = await Service.findById(id);
+        if (dbService) {
+          serviceName = dbService.name;
+        }
+      } catch (e) {}
+    }
+
+    // Delete from in-memory/JSON store
+    memoryStore.deleteService(id);
+
+    // Delete from MongoDB Atlas if active
+    if (!getIsInMemoryMode()) {
+      try {
+        await Service.deleteOne({ _id: id });
+      } catch (err) {
+        console.warn("MongoDB delete service sync error:", err);
+      }
+    }
+
+    res.status(200).json({ message: `Service '${serviceName}' permanently deleted successfully.` });
+  } catch (error) {
+    console.error("Admin delete service error:", error);
+    res.status(500).json({ message: "Server error deleting service" });
+  }
+};

@@ -278,6 +278,20 @@ export const deleteService = async (
 
     const id = getParamId(req.params.id);
 
+    // If role is provider, verify ownership
+    if (req.user.role === "provider") {
+      if (getIsInMemoryMode()) {
+        const memServ = memoryStore.getServiceById(id);
+        if (memServ && memServ.provider) {
+          const provId = typeof memServ.provider === "object" ? (memServ.provider._id || memServ.provider.id) : memServ.provider;
+          if (provId && provId !== req.user.id) {
+            res.status(403).json({ message: "You can only delete your own services" });
+            return;
+          }
+        }
+      }
+    }
+
     if (getIsInMemoryMode()) {
       memoryStore.deleteService(id);
       res.status(200).json({ message: "Service deleted successfully" });
@@ -287,10 +301,13 @@ export const deleteService = async (
     try {
       const service = await Service.findById(id);
       if (service) {
+        if (req.user.role === "provider" && service.provider.toString() !== req.user.id) {
+          res.status(403).json({ message: "You can only delete your own services" });
+          return;
+        }
         await service.deleteOne();
-      } else {
-        memoryStore.deleteService(id);
       }
+      memoryStore.deleteService(id);
       res.status(200).json({ message: "Service deleted successfully" });
     } catch {
       memoryStore.deleteService(id);

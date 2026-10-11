@@ -12,6 +12,9 @@ export interface MemoryUser {
   providerStatus?: "pending" | "approved" | "rejected";
   isSuspended?: boolean;
   rejectionReason?: string;
+  theme?: "light" | "dark" | "system";
+  deletionRequested?: boolean;
+  deletionRequestedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

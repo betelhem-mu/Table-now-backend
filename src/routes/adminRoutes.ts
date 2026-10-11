@@ -13,6 +13,7 @@ import {
   updateProviderStatusDirect,
   getAdminServices,
   getAdminBookings,
+  deleteAdminService,
 } from "../controllers/adminController.js";
 
 const router = Router();
@@ -38,6 +39,7 @@ router.patch("/users/:id/provider-status", updateProviderStatusDirect);
 
 // Service & Booking Oversight
 router.get("/services", getAdminServices);
+router.delete("/services/:id", deleteAdminService);
 router.get("/bookings", getAdminBookings);
 
 export default router;
