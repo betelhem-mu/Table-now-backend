@@ -33,6 +33,17 @@
       "isSuspended": false,
       "createdAt": "2026-10-10T13:13:42.998Z",
       "updatedAt": "2026-10-10T13:13:42.998Z"
+    },
+    {
+      "_id": "cbdf4c54f90a1a12a2c64ec",
+      "name": "Persisted User",
+      "email": "testuser_persisted@example.com",
+      "password": "$2b$10$V59vcOo2dCIfMPNQ0y2deeTmrL6CG07yw7fjUrOFHf/f9ZRzJJB1m",
+      "role": "customer",
+      "providerStatus": "approved",
+      "isSuspended": false,
+      "createdAt": "2026-10-11T08:55:14.924Z",
+      "updatedAt": "2026-10-11T08:55:14.924Z"
     }
   ],
   "services": [
